@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
     <style>
+        /* CSS yang sudah ada, tidak ada perubahan di sini */
         * {
             margin: 0;
             padding: 0;
@@ -679,6 +680,8 @@ async function sendMessage() {
             return rest;
         });
 
+        // Pastikan URL API sudah benar untuk Vercel Serverless Function
+        // Jika api/generate.js ada di folder /api, maka panggil /api/generate
         const response = await fetch("/api/generate", {
             method: "POST",
             headers: {
@@ -688,8 +691,8 @@ async function sendMessage() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Network response was not ok');
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error: Non-JSON response from server' }));
+            throw new Error(errorData.error || `Network response was not ok, status: ${response.status}`);
         }
 
         const data = await response.json();
@@ -702,7 +705,7 @@ async function sendMessage() {
             appendMessage(data.response, 'assistant', null, aiResponseTimestamp);
             saveChatToLocalStorage(); // Simpan chatHistory lengkap ke LocalStorage
         } else {
-            appendMessage("Sorry, there was an error processing your request or no response from AI.");
+            appendMessage("Sorry, there was an error processing your request or no response from AI.", 'assistant');
             console.error("No response or invalid data from API:", data);
         }
     } catch (error) {
