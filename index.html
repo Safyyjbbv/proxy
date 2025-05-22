@@ -92,9 +92,6 @@
             padding: 8.5rem 1rem 7rem 1rem;
             scroll-behavior: smooth;
             background: linear-gradient(to bottom, #131320, #1a1a2e);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
         }
 
         .welcome-message {
@@ -115,27 +112,15 @@
             font-size: 1rem;
         }
 
-        /* Container untuk setiap baris pesan */
-        .message-row {
-            display: flex;
-            margin-bottom: 0.5rem;
-        }
-
         .message {
             max-width: 85%;
-            padding: 0.75rem 1rem;
-            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+            margin: 1rem 0;
+            padding: 1rem 1.25rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             animation: slideIn 0.3s ease-out;
             position: relative;
             word-wrap: break-word;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            font-size: 0.95rem;
-        }
-
-        .message-content {
-            /* Konten utama pesan */
         }
 
         .message pre {
@@ -181,7 +166,7 @@
             font-weight: bold;
         }
 
-        .message img {
+        .message img { /* Gaya untuk gambar di dalam pesan */
             max-width: 100%;
             height: auto;
             border-radius: 0.5rem;
@@ -189,24 +174,19 @@
             display: block;
         }
 
-        /* Perubahan gaya estetika balon obrolan */
-        .user-message-row {
-            justify-content: flex-end;
-        }
         .user-message {
             background: linear-gradient(135deg, #4f46e5, #6366f1);
+            margin-left: auto;
             color: white;
-            border-radius: 1rem 1rem 0.3rem 1rem; /* Sudut kanan bawah lebih kecil */
+            border-bottom-right-radius: 0.5rem;
         }
 
-        .assistant-message-row {
-            justify-content: flex-start;
-        }
         .assistant-message {
             background-color: #1f2937;
+            margin-right: auto;
             color: #f3f4f6;
             border: 1px solid #2d2d3d;
-            border-radius: 1rem 1rem 1rem 0.3rem; /* Sudut kiri bawah lebih kecil */
+            border-bottom-left-radius: 0.5rem;
         }
 
         .typing-indicator {
@@ -221,7 +201,6 @@
             max-width: 85%;
             animation: slideIn 0.3s ease-out;
             border: 1px solid #2d2d3d;
-            align-self: flex-start;
         }
 
         .typing-dot {
@@ -277,18 +256,19 @@
             color: #6b7280;
         }
 
+        /* Gaya untuk tombol upload gambar */
         .image-upload-label {
-            background: #374151;
+            background: #374151; /* Warna abu-abu yang cocok */
             color: white;
             border: none;
             border-radius: 9999px;
-            padding: 0.75rem 1.1rem;
+            padding: 0.75rem 1.1rem; /* Sedikit lebih kecil agar rapi */
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: center; /* Pusatkan ikon */
             gap: 0.5rem;
             font-size: 0.938rem;
         }
@@ -447,8 +427,7 @@ marked.setOptions({
 });
 
 let isGenerating = false;
-// chatHistory akan menyimpan objek { role: ..., parts: ... } (tanpa timestamp)
-let chatHistory = [];
+let chatHistory = []; // Array untuk menyimpan riwayat percakapan (teks dan gambar)
 
 // --- Fungsi Utilitas UI ---
 function showToast(message) {
@@ -458,31 +437,23 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-// Fungsi formatTimestamp dan elemen timestamp di appendMessage dihilangkan
-
-function appendMessage(text, role, imageUrl = null) { // Parameter timestamp dihapus
+function appendMessage(text, role, imageUrl = null) {
     const chatContainer = document.getElementById('chat-container');
-    
-    const messageRow = document.createElement('div');
-    messageRow.className = `message-row ${role}-message-row`;
-
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${role}-message`;
+    messageDiv.className = `message ${role === 'user' ? 'user-message' : 'assistant-message'}`;
     
-    const messageContentDiv = document.createElement('div');
-    messageContentDiv.className = 'message-content';
-
     if (imageUrl) {
         const img = document.createElement('img');
         img.src = imageUrl;
         img.alt = 'User uploaded image';
-        messageContentDiv.appendChild(img);
+        messageDiv.appendChild(img);
     }
 
     if (text) {
+        // Untuk pesan AI, parse Markdown. Untuk user, cukup textContent
         if (role === 'assistant') {
-            messageContentDiv.innerHTML += marked.parse(text);
-            messageContentDiv.querySelectorAll('pre').forEach((pre) => {
+            messageDiv.innerHTML += marked.parse(text); // Tambahkan ke innerHTML yang sudah ada gambar
+            messageDiv.querySelectorAll('pre').forEach((pre) => {
                 const copyButton = document.createElement('button');
                 copyButton.className = 'copy-button';
                 copyButton.innerHTML = '<i class="fas fa-copy"></i><span>Copy</span>';
@@ -495,60 +466,43 @@ function appendMessage(text, role, imageUrl = null) { // Parameter timestamp dih
                 pre.appendChild(copyButton);
                 hljs.highlightElement(pre.querySelector('code'));
             });
-        } else {
-            messageContentDiv.appendChild(document.createTextNode(text));
+        } else { // Pesan user
+            messageDiv.appendChild(document.createTextNode(text)); // Tambahkan textNode
         }
     }
     
-    messageDiv.appendChild(messageContentDiv);
-
-    // Bagian timestamp dihilangkan
-    // const timestampSpan = document.createElement('span');
-    // timestampSpan.className = 'timestamp';
-    // timestampSpan.textContent = formatTimestamp(new Date(timestamp)); 
-    // messageDiv.appendChild(timestampSpan);
-
-    messageRow.appendChild(messageDiv);
-    chatContainer.appendChild(messageRow);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll ke bawah
 }
 
 function showTypingIndicator() {
     const chatContainer = document.getElementById('chat-container');
-    const typingRow = document.createElement('div');
-    typingRow.className = 'message-row assistant-message-row';
-    typingRow.id = 'typing-indicator-row';
-    
     const typingDiv = document.createElement('div');
     typingDiv.className = 'typing-indicator';
-    typingDiv.id = 'typing-indicator';
-
+    typingDiv.id = 'typing-indicator'; // Tambahkan ID untuk memudahkan penghapusan
     typingDiv.innerHTML = `
         <div class="typing-dot"></div>
         <div class="typing-dot"></div>
         <div class="typing-dot"></div>
     `;
-    
-    typingRow.appendChild(typingDiv);
-    chatContainer.appendChild(typingRow);
+    chatContainer.appendChild(typingDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
-    return typingRow;
+    return typingDiv;
 }
 
 function removeTypingIndicator() {
-    const indicatorRow = document.getElementById('typing-indicator-row');
-    if (indicatorRow && indicatorRow.parentElement) {
-        indicatorRow.remove();
+    const indicator = document.getElementById('typing-indicator');
+    if (indicator && indicator.parentElement) {
+        indicator.remove();
     }
 }
 
 // --- Fungsi Manajemen Memori (LocalStorage) ---
 function loadChatFromLocalStorage() {
-    // Memuat history tanpa timestamp
     const savedHistory = localStorage.getItem('geminiChatHistory');
     if (savedHistory) {
         chatHistory = JSON.parse(savedHistory);
-        
+        // Hapus welcome message default jika ada history
         const welcomeMessageDiv = document.querySelector('.welcome-message');
         if (welcomeMessageDiv) {
             welcomeMessageDiv.remove();
@@ -560,20 +514,18 @@ function loadChatFromLocalStorage() {
                 const userImagePart = turn.parts.find(p => p.inlineData);
                 const text = userTextPart ? userTextPart.text : '';
                 const imageUrl = userImagePart ? `data:${userImagePart.inlineData.mimeType};base64,${userImagePart.inlineData.data}` : null;
-                // timestamp tidak lagi diambil/digunakan di sini
-                appendMessage(text, 'user', imageUrl); 
+                appendMessage(text, 'user', imageUrl);
             } else if (turn.role === 'model') {
                 const modelTextPart = turn.parts.find(p => p.text);
                 const text = modelTextPart ? modelTextPart.text : '';
-                // timestamp tidak lagi diambil/digunakan di sini
                 appendMessage(text, 'assistant');
             }
         });
     }
-    
+    // Jika tidak ada history, pastikan welcome message tetap ada
     if (chatHistory.length === 0) {
         const welcomeMessageDiv = document.querySelector('.welcome-message');
-        if (!welcomeMessageDiv) {
+        if (!welcomeMessageDiv) { // Tambahkan kembali jika sudah terhapus
             const welcomeDiv = document.createElement('div');
             welcomeDiv.className = 'welcome-message';
             welcomeDiv.innerHTML = '<h2>Welcome to Gemini AI Assistant!</h2><p>I\'m here to help you. Feel free to ask me anything.</p>';
@@ -583,7 +535,6 @@ function loadChatFromLocalStorage() {
 }
 
 function saveChatToLocalStorage() {
-    // Menyimpan history tanpa timestamp
     localStorage.setItem('geminiChatHistory', JSON.stringify(chatHistory));
 }
 
@@ -598,6 +549,7 @@ async function sendMessage() {
     const prompt = promptInput.value.trim();
     const imageFile = imageUploadInput.files[0];
 
+    // Jika tidak ada teks dan tidak ada gambar, jangan kirim
     if (!prompt && !imageFile) {
         showToast('Please type a message or upload an image.');
         return;
@@ -606,8 +558,9 @@ async function sendMessage() {
     isGenerating = true;
     promptInput.disabled = true;
     submitBtn.disabled = true;
-    imageUploadInput.disabled = true;
+    imageUploadInput.disabled = true; // Nonaktifkan juga upload gambar
 
+    // Hapus welcome message jika ini pesan pertama
     const welcomeMessageDiv = document.querySelector('.welcome-message');
     if (welcomeMessageDiv) {
         welcomeMessageDiv.remove();
@@ -615,14 +568,14 @@ async function sendMessage() {
 
     let imageUrlBase64 = null;
     const userContentParts = [];
-    // const messageTimestamp = new Date(); // Timestamp dihilangkan
 
+    // Proses gambar jika ada
     if (imageFile) {
         const reader = new FileReader();
         const readerPromise = new Promise((resolve, reject) => {
             reader.onloadend = () => resolve(reader.result);
             reader.onerror = reject;
-            reader.readAsDataURL(imageFile);
+            reader.readAsDataURL(imageFile); // Baca file sebagai Base64
         });
         try {
             imageUrlBase64 = await readerPromise;
@@ -645,70 +598,37 @@ async function sendMessage() {
         }
     }
 
+    // Tambahkan teks jika ada
     if (prompt) {
         userContentParts.push({ text: prompt });
     }
 
-    // Tambahkan pesan user ke chat history (tanpa timestamp)
+    // Tambahkan pesan user ke chat history dan UI
     chatHistory.push({ role: "user", parts: userContentParts });
-    appendMessage(prompt, 'user', imageUrlBase64); // Parameter timestamp dihapus
+    appendMessage(prompt, 'user', imageUrlBase64); // Tampilkan di UI
 
     const typingIndicator = showTypingIndicator();
-    promptInput.value = '';
-    imageUploadInput.value = '';
+    promptInput.value = ''; // Kosongkan input teks
+    imageUploadInput.value = ''; // Kosongkan input file
 
     try {
-        // historyForGemini sekarang sama dengan chatHistory karena tidak ada timestamp di chatHistory
-        const response = await fetch("/api/generate", {
+        const response = await fetch("/api/generate", { // Menggunakan path relatif
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ history: chatHistory }) // Mengirim chatHistory langsung
+            body: JSON.stringify({ history: chatHistory }) // Kirim seluruh history
         });
 
         if (!response.ok) {
-            const errorText = await response.text(); // Ambil respons sebagai teks
-            let errorMessage = `Network response was not ok, status: ${response.status}.`;
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.error || errorMessage;
-            } catch (e) {
-                errorMessage += ` Response: ${errorText.substring(0, 100)}...`; // Potong respons jika terlalu panjang
-            }
-            throw new Error(errorMessage);
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Network response was not ok');
         }
 
         const data = await response.json();
-        removeTypingIndicator();
+        removeTypingIndicator(); // Hapus indikator typing
         
         if (data.response) {
-            // Timestamp dihilangkan
-            chatHistory.push({ role: "model", parts: [{ text: data.response }] });
-            appendMessage(data.response, 'assistant'); // Parameter timestamp dihapus
-            saveChatToLocalStorage(); // Simpan chatHistory lengkap ke LocalStorage
-        } else {
-            appendMessage("Sorry, there was an error processing your request or no response from AI.", 'assistant');
-            console.error("No response or invalid data from API:", data);
-        }
-    } catch (error) {
-        removeTypingIndicator();
-        appendMessage(`Error: ${error.message || "Failed to connect to the server. Please try again."}`, 'assistant');
-        console.error('Error:', error);
-    } finally {
-        isGenerating = false;
-        promptInput.disabled = false;
-        submitBtn.disabled = false;
-        imageUploadInput.disabled = false;
-        promptInput.focus();
-    }
-}
-
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadChatFromLocalStorage();
-    document.getElementById('prompt').focus();
-});
-    </script>
-</body>
-</html>
+            chatHistory.push({ role: "model", parts: [{ text: data.response }] }); // Tambahkan respons AI ke history
+            appendMessage(data.response, 'assistant'); // Tampilkan respons AI di UI
+            saveChatToLocalStorage(); // Simpan histo
