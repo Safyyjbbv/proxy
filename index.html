@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
     <style>
-        /* CSS yang sudah ada, tidak ada perubahan di sini */
         * {
             margin: 0;
             padding: 0;
@@ -116,7 +115,7 @@
             font-size: 1rem;
         }
 
-        /* Container untuk setiap baris pesan (termasuk timestamp) */
+        /* Container untuk setiap baris pesan */
         .message-row {
             display: flex;
             margin-bottom: 0.5rem;
@@ -125,7 +124,6 @@
         .message {
             max-width: 85%;
             padding: 0.75rem 1rem;
-            border-radius: 0.7rem;
             box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
             animation: slideIn 0.3s ease-out;
             position: relative;
@@ -191,22 +189,14 @@
             display: block;
         }
 
-        .timestamp {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-            align-self: flex-end;
-            margin-left: auto;
-            margin-top: 0.25rem;
-        }
-
-
+        /* Perubahan gaya estetika balon obrolan */
         .user-message-row {
             justify-content: flex-end;
         }
         .user-message {
             background: linear-gradient(135deg, #4f46e5, #6366f1);
             color: white;
-            border-bottom-right-radius: 0.2rem;
+            border-radius: 1rem 1rem 0.3rem 1rem; /* Sudut kanan bawah lebih kecil */
         }
 
         .assistant-message-row {
@@ -216,7 +206,7 @@
             background-color: #1f2937;
             color: #f3f4f6;
             border: 1px solid #2d2d3d;
-            border-bottom-left-radius: 0.2rem;
+            border-radius: 1rem 1rem 1rem 0.3rem; /* Sudut kiri bawah lebih kecil */
         }
 
         .typing-indicator {
@@ -457,7 +447,7 @@ marked.setOptions({
 });
 
 let isGenerating = false;
-// chatHistory akan menyimpan objek { role: ..., parts: ..., timestamp: ... }
+// chatHistory akan menyimpan objek { role: ..., parts: ... } (tanpa timestamp)
 let chatHistory = [];
 
 // --- Fungsi Utilitas UI ---
@@ -468,13 +458,9 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-function formatTimestamp(date) {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
+// Fungsi formatTimestamp dan elemen timestamp di appendMessage dihilangkan
 
-function appendMessage(text, role, imageUrl = null, timestamp = new Date()) {
+function appendMessage(text, role, imageUrl = null) { // Parameter timestamp dihapus
     const chatContainer = document.getElementById('chat-container');
     
     const messageRow = document.createElement('div');
@@ -516,10 +502,11 @@ function appendMessage(text, role, imageUrl = null, timestamp = new Date()) {
     
     messageDiv.appendChild(messageContentDiv);
 
-    const timestampSpan = document.createElement('span');
-    timestampSpan.className = 'timestamp';
-    timestampSpan.textContent = formatTimestamp(new Date(timestamp)); // Pastikan timestamp adalah objek Date atau string yang valid
-    messageDiv.appendChild(timestampSpan);
+    // Bagian timestamp dihilangkan
+    // const timestampSpan = document.createElement('span');
+    // timestampSpan.className = 'timestamp';
+    // timestampSpan.textContent = formatTimestamp(new Date(timestamp)); 
+    // messageDiv.appendChild(timestampSpan);
 
     messageRow.appendChild(messageDiv);
     chatContainer.appendChild(messageRow);
@@ -557,6 +544,7 @@ function removeTypingIndicator() {
 
 // --- Fungsi Manajemen Memori (LocalStorage) ---
 function loadChatFromLocalStorage() {
+    // Memuat history tanpa timestamp
     const savedHistory = localStorage.getItem('geminiChatHistory');
     if (savedHistory) {
         chatHistory = JSON.parse(savedHistory);
@@ -572,13 +560,13 @@ function loadChatFromLocalStorage() {
                 const userImagePart = turn.parts.find(p => p.inlineData);
                 const text = userTextPart ? userTextPart.text : '';
                 const imageUrl = userImagePart ? `data:${userImagePart.inlineData.mimeType};base64,${userImagePart.inlineData.data}` : null;
-                // Ambil timestamp dari properti 'timestamp' pada objek turn
-                appendMessage(text, 'user', imageUrl, turn.timestamp);
+                // timestamp tidak lagi diambil/digunakan di sini
+                appendMessage(text, 'user', imageUrl); 
             } else if (turn.role === 'model') {
                 const modelTextPart = turn.parts.find(p => p.text);
                 const text = modelTextPart ? modelTextPart.text : '';
-                // Ambil timestamp dari properti 'timestamp' pada objek turn
-                appendMessage(text, 'assistant', null, turn.timestamp);
+                // timestamp tidak lagi diambil/digunakan di sini
+                appendMessage(text, 'assistant');
             }
         });
     }
@@ -595,9 +583,7 @@ function loadChatFromLocalStorage() {
 }
 
 function saveChatToLocalStorage() {
-    // Saat menyimpan, pastikan hanya properti yang relevan untuk Gemini API yang ada di objek history
-    // Namun, kita tetap ingin menyimpan timestamp untuk tampilan UI
-    // Jadi, kita akan menyimpan objek history lengkap dengan timestamp
+    // Menyimpan history tanpa timestamp
     localStorage.setItem('geminiChatHistory', JSON.stringify(chatHistory));
 }
 
@@ -629,7 +615,7 @@ async function sendMessage() {
 
     let imageUrlBase64 = null;
     const userContentParts = [];
-    const messageTimestamp = new Date();
+    // const messageTimestamp = new Date(); // Timestamp dihilangkan
 
     if (imageFile) {
         const reader = new FileReader();
@@ -663,46 +649,43 @@ async function sendMessage() {
         userContentParts.push({ text: prompt });
     }
 
-    // Tambahkan pesan user ke chat history (termasuk timestamp untuk UI)
-    chatHistory.push({ role: "user", parts: userContentParts, timestamp: messageTimestamp.toISOString() });
-    appendMessage(prompt, 'user', imageUrlBase64, messageTimestamp);
+    // Tambahkan pesan user ke chat history (tanpa timestamp)
+    chatHistory.push({ role: "user", parts: userContentParts });
+    appendMessage(prompt, 'user', imageUrlBase64); // Parameter timestamp dihapus
 
     const typingIndicator = showTypingIndicator();
     promptInput.value = '';
     imageUploadInput.value = '';
 
     try {
-        // Buat objek history yang akan dikirim ke Gemini API
-        // Kita perlu menyaring properti 'timestamp' karena Gemini tidak mengenalnya
-        const historyForGemini = chatHistory.map(turn => {
-            // Membuat salinan objek turn dan menghapus properti timestamp
-            const { timestamp, ...rest } = turn;
-            return rest;
-        });
-
-        // Pastikan URL API sudah benar untuk Vercel Serverless Function
-        // Jika api/generate.js ada di folder /api, maka panggil /api/generate
+        // historyForGemini sekarang sama dengan chatHistory karena tidak ada timestamp di chatHistory
         const response = await fetch("/api/generate", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ history: historyForGemini }) // Kirim history yang sudah difilter
+            body: JSON.stringify({ history: chatHistory }) // Mengirim chatHistory langsung
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error: Non-JSON response from server' }));
-            throw new Error(errorData.error || `Network response was not ok, status: ${response.status}`);
+            const errorText = await response.text(); // Ambil respons sebagai teks
+            let errorMessage = `Network response was not ok, status: ${response.status}.`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch (e) {
+                errorMessage += ` Response: ${errorText.substring(0, 100)}...`; // Potong respons jika terlalu panjang
+            }
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
         removeTypingIndicator();
         
         if (data.response) {
-            const aiResponseTimestamp = new Date();
-            // Tambahkan respons AI ke chatHistory (termasuk timestamp)
-            chatHistory.push({ role: "model", parts: [{ text: data.response }], timestamp: aiResponseTimestamp.toISOString() });
-            appendMessage(data.response, 'assistant', null, aiResponseTimestamp);
+            // Timestamp dihilangkan
+            chatHistory.push({ role: "model", parts: [{ text: data.response }] });
+            appendMessage(data.response, 'assistant'); // Parameter timestamp dihapus
             saveChatToLocalStorage(); // Simpan chatHistory lengkap ke LocalStorage
         } else {
             appendMessage("Sorry, there was an error processing your request or no response from AI.", 'assistant');
